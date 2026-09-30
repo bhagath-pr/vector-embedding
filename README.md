@@ -64,31 +64,58 @@ Instead of semantic meaning, our vector embedding captures **functional relation
 ### 1.1 Mathematical Formulation of Application Entities
 
 An application problem instance is defined as the formal sextuple:
-$$\mathcal{A} = (\mathcal{S}, \mathcal{C}, S_I, G, \mathcal{R}, \mathcal{K})$$
 
-#### 1. State Space $\mathcal{S}$ and State Representation
+$$
+\mathcal{A} = (\mathcal{S}, \mathcal{C}, S_I, G, \mathcal{R}, \mathcal{K})
+$$
+
+#### 1. State Space and State Representation
 An application state $S \in \mathcal{S}$ represents the valuation of a finite universe of state variables $V = \{x_1, x_2, \dots, x_n\}$:
-$$S = \{(x_1, v_1), (x_2, v_2), \dots, (x_n, v_n)\}$$
+
+$$
+S = \{(x_1, v_1), (x_2, v_2), \dots, (x_n, v_n)\}
+$$
+
 Variables may be Boolean ($v \in \{0, 1\}$), categorical / enumerated ($v \in \mathcal{D}_k$), or continuous / real-valued ($v \in \mathbb{R}$).  
 The state embedding function $\phi_S : \mathcal{S} \to \mathbb{R}^{d_S}$ maps each variable to its normalized feature coordinates:
-$$\phi_S(S) = \big[ \mathbf{s}_1 \;\parallel\; \mathbf{s}_2 \;\parallel\; \dots \;\parallel\; \mathbf{s}_n \big] \in \mathbb{R}^{d_S}$$
 
-#### 2. Goal Specification $G$
+$$
+\phi_S(S) = \big[ \mathbf{s}_1 \;\parallel\; \mathbf{s}_2 \;\parallel\; \dots \;\parallel\; \mathbf{s}_n \big] \in \mathbb{R}^{d_S}
+$$
+
+#### 2. Goal Specification
 A goal $G = \{g_1, g_2, \dots, g_m\}$ specifies target conditions on a subset of state variables. In continuous vector space, $G$ is embedded as a dual target-mask pair:
-$$\phi_G(G) = \big[ \mathbf{g}_{val} \;\parallel\; \mathbf{g}_{mask} \big] \in \mathbb{R}^{2 \cdot d_S}$$
-where $\mathbf{g}_{mask}[k] = 1$ if variable $k$ is constrained by $G$ ($0$ otherwise), and $\mathbf{g}_{val}[k]$ holds the desired coordinate value. A state $S$ satisfies $G$ ($S \models G$) iff:
-$$\|\mathbf{g}_{mask} \odot (\phi_S(S) - \mathbf{g}_{val})\|_2 = 0$$
 
-#### 3. Formal Capability Representation $C_i$
+$$
+\phi_G(G) = \big[ \mathbf{g}_{\text{val}} \;\parallel\; \mathbf{g}_{\text{mask}} \big] \in \mathbb{R}^{2 \cdot d_S}
+$$
+
+where the mask coordinates satisfy:
+
+$$
+\mathbf{g}_{\text{mask}}[k] = \begin{cases} 1 & \text{if variable } k \text{ is constrained by } G \\ 0 & \text{otherwise} \end{cases}
+$$
+
+and $\mathbf{g}_{\text{val}}[k]$ holds the desired coordinate value. A state $S$ satisfies $G$ ($S \models G$) iff:
+
+$$
+\|\mathbf{g}_{\text{mask}} \odot (\phi_S(S) - \mathbf{g}_{\text{val}})\|_2 = 0
+$$
+
+#### 3. Formal Capability Representation
 A capability $C_i$ is an 11-tuple:
-$$C_i = (T_i, I_i, O_i, P_i, E_i, K_i, R_i, Q_i, Rel_i, A_i, M_i)$$
+
+$$
+C_i = (T_i, I_i, O_i, P_i, E_i, K_i, R_i, Q_i, Rel_i, A_i, M_i)
+$$
+
 - **Type ($T_i$)**: $T_i \in \{\text{API, DATABASE, GUI, EVENT, FUNCTION, FILE, COMPUTATION, MESSAGE, SERVICE}\}$
 - **Inputs ($I_i$) & Outputs ($O_i$)**: Typed schema parameters $i_j = (\text{name}, \text{type}, \text{domain}, \text{required})$ and $o_j = (\text{name}, \text{type}, \text{domain})$.
 - **Preconditions ($P_i$)**: Logical constraints on state variables; $C_i$ is applicable to state $S \iff S \models P_i$.
 - **Effects ($E_i$)**: State mutations; $C_i : S \to S', S' = Apply(S, E_i)$.
 - **Constraints ($K_i$)**: Execution rules and security policies.
 - **Resources ($R_i$)**: Hardware, network, and token dependencies $R_i \subseteq \mathcal{R}$.
-- **Quality Attributes ($Q_i$)**: Multi-criteria operational vector $Q_i = (C_{time}, C_{resource}, C_{money}, C_{risk}, C_{energy}) \in \mathbb{R}^5_{\ge 0}$.
+- **Quality Attributes ($Q_i$)**: Multi-criteria operational vector $Q_i = (C_{\text{time}}, C_{\text{resource}}, C_{\text{money}}, C_{\text{risk}}, C_{\text{energy}}) \in \mathbb{R}^5_{\ge 0}$.
 - **Reliability ($Rel_i$)**: Execution success probability $Rel_i \in (0, 1]$.
 - **Availability ($A_i$)**: Temporal availability flag / duty-cycle $A_i \in [0, 1]$.
 - **Execution Mechanism ($M_i$)**: Technical metadata (e.g., HTTP method/endpoint, SQL query, DOM selector).
@@ -99,7 +126,9 @@ $$C_i = (T_i, I_i, O_i, P_i, E_i, K_i, R_i, Q_i, Rel_i, A_i, M_i)$$
 
 A single unstructured Euclidean vector cannot simultaneously capture functional behavior, schema compatibility, and operational costs. We design a **Structured Multi-Sector Subspace Embedding** $\phi_C : \mathcal{C} \to \mathbb{R}^{d_C}$ partitioned into eight orthogonal feature sectors:
 
-$$\phi_C(C_i) = \big[ \mathbf{p}_{val} \;\parallel\; \mathbf{p}_{mask} \;\parallel\; \mathbf{e}_{val} \;\parallel\; \mathbf{e}_{mask} \;\parallel\; \mathbf{i} \;\parallel\; \mathbf{o} \;\parallel\; \mathbf{t} \;\parallel\; \mathbf{r} \;\parallel\; \mathbf{q} \;\parallel\; \mathbf{m} \big]$$
+$$
+\phi_C(C_i) = \big[ \mathbf{p}_{\text{val}} \;\parallel\; \mathbf{p}_{\text{mask}} \;\parallel\; \mathbf{e}_{\text{val}} \;\parallel\; \mathbf{e}_{\text{mask}} \;\parallel\; \mathbf{i} \;\parallel\; \mathbf{o} \;\parallel\; \mathbf{t} \;\parallel\; \mathbf{r} \;\parallel\; \mathbf{q} \;\parallel\; \mathbf{m} \big]
+$$
 
 ```
 +--------------------------------------------------------------------------------------------------------------------+
@@ -110,22 +139,40 @@ $$\phi_C(C_i) = \big[ \mathbf{p}_{val} \;\parallel\; \mathbf{p}_{mask} \;\parall
 +-------------------+-------------------+-------------+--------------+------------+------------+-----------+-------------+
 ```
 
-1. **Precondition Sector** $[\mathbf{p}_{val} \parallel \mathbf{p}_{mask}] \in \mathbb{R}^{2 \cdot d_S}$:  
-   Encodes required variable values ($\mathbf{p}_{val}$) and constraint indicator flags ($\mathbf{p}_{mask}$). This cleanly solves the null-value ambiguity: requiring a variable to be `False` produces $\mathbf{p}_{val}[k]=0, \mathbf{p}_{mask}[k]=1$, whereas having no precondition on that variable produces $\mathbf{p}_{val}[k]=0, \mathbf{p}_{mask}[k]=0$.
-2. **Effect Sector** $[\mathbf{e}_{val} \parallel \mathbf{e}_{mask}] \in \mathbb{R}^{2 \cdot d_S}$:  
-   Encodes state mutations ($\mathbf{e}_{val}$) and active mutation indicators ($\mathbf{e}_{mask}$). State updates follow vector masking:
-   $$\phi_S(Apply(S, E_i)) = (\mathbf{1} - \mathbf{e}_{mask}) \odot \phi_S(S) + \mathbf{e}_{mask} \odot \mathbf{e}_{val}$$
-3. **Input & Output Sectors** $\mathbf{i}, \mathbf{o} \in \mathbb{R}^{d_{io}}$:  
-   Bag-of-ports schema hash representations capturing parameter names, types, and domains.
-4. **Type Sector** $\mathbf{t} \in \mathbb{R}^9$:  
-   One-hot vector identifying $T_i \in \{\text{API, DATABASE, GUI, EVENT, FUNCTION, FILE, COMPUTATION, MESSAGE, SERVICE}\}$.
-5. **Resource Sector** $\mathbf{r} \in \mathbb{R}^{d_{res}}$:  
-   Multi-hot vector indicating resource dependencies across $\mathcal{R}$ (Database, AuthToken, PaymentGateway, Network, GPU, etc.).
-6. **Operational Sector** $\mathbf{q} \in \mathbb{R}^7$:  
-   Continuous normalized coordinates:
-   $$\mathbf{q} = \Big[ \frac{C_{time}}{\tau_0}, \frac{C_{res}}{\rho_0}, \frac{C_{money}}{\mu_0}, C_{risk}, \frac{C_{energy}}{\varepsilon_0}, -\ln(\max(Rel_i, 10^{-6})), A_i \Big]$$
-7. **Mechanism Sector** $\mathbf{m} \in \mathbb{R}^{d_m}$:  
-   Continuous representation of low-level execution metadata.
+**1. Precondition Sector** ($\mathbf{p} \in \mathbb{R}^{2 \cdot d_S}$):  
+Composed of target values $\mathbf{p}\_{\text{val}}$ and constraint mask $\mathbf{p}\_{\text{mask}}$. This cleanly solves the null-value ambiguity: requiring a variable to be `False` produces:
+
+$$
+\mathbf{p}_{\text{val}}[k] = 0, \quad \mathbf{p}_{\text{mask}}[k] = 1
+$$
+
+whereas an unconstrained variable has $\mathbf{p}\_{\text{mask}}[k] = 0$.
+
+**2. Effect Sector** ($\mathbf{e} \in \mathbb{R}^{2 \cdot d_S}$):  
+Composed of mutation values $\mathbf{e}\_{\text{val}}$ and active mutation indicator mask $\mathbf{e}\_{\text{mask}}$. State updates follow vector masking:
+
+$$
+\phi_S(Apply(S, E_i)) = (\mathbf{1} - \mathbf{e}_{\text{mask}}) \odot \phi_S(S) + \mathbf{e}_{\text{mask}} \odot \mathbf{e}_{\text{val}}
+$$
+
+**3. Input & Output Sectors** ($\mathbf{i}, \mathbf{o} \in \mathbb{R}^{d_{\text{io}}}$):  
+Bag-of-ports schema hash representations capturing parameter names, types, and domains.
+
+**4. Type Sector** ($\mathbf{t} \in \mathbb{R}^9$):  
+One-hot vector identifying $T_i \in \{\text{API, DATABASE, GUI, EVENT, FUNCTION, FILE, COMPUTATION, MESSAGE, SERVICE}\}$.
+
+**5. Resource Sector** ($\mathbf{r} \in \mathbb{R}^{d_{\text{res}}}$):  
+Multi-hot vector indicating resource dependencies across $\mathcal{R}$ (Database, AuthToken, PaymentGateway, Network, GPU, etc.).
+
+**6. Operational Sector** ($\mathbf{q} \in \mathbb{R}^7$):  
+Continuous normalized coordinates:
+
+$$
+\mathbf{q} = \Big[ \frac{C_{\text{time}}}{\tau_0}, \frac{C_{\text{res}}}{\rho_0}, \frac{C_{\text{money}}}{\mu_0}, C_{\text{risk}}, \frac{C_{\text{energy}}}{\varepsilon_0}, -\ln(\max(Rel_i, 10^{-6})), A_i \Big]
+$$
+
+**7. Mechanism Sector** ($\mathbf{m} \in \mathbb{R}^{d_m}$):  
+Continuous representation of low-level execution metadata.
 
 ---
 
@@ -135,21 +182,49 @@ A central insight of this design is that **Functional Similarity and Composabili
 - **Similarity** is symmetric and measures functional interchangeability: two capabilities that perform payments (e.g., Stripe API and PayPal API) have high functional similarity, but they *do not compose* with one another.
 - **Composability** is directional and asymmetric: $C_1$ composes with $C_2$ ($C_1 \to C_2$) if the outputs and effects of $C_1$ satisfy the inputs and preconditions of $C_2$.
 
-#### Functional Similarity $\text{Sim}_{func}(C_a, C_b)$
-Evaluates functional resemblance over the core functional vector $\mathbf{v}_{func} = [\mathbf{p}_{val} \parallel \mathbf{p}_{mask} \parallel \mathbf{e}_{val} \parallel \mathbf{e}_{mask} \parallel \mathbf{i} \parallel \mathbf{o}]$:
-$$\text{Sim}_{func}(C_a, C_b) = \frac{\langle \mathbf{v}_{func}(C_a), \mathbf{v}_{func}(C_b) \rangle}{\|\mathbf{v}_{func}(C_a)\|_2 \|\mathbf{v}_{func}(C_b)\|_2}$$
+#### Functional Similarity
 
-#### Implementation Dissimilarity $\text{Dist}_{impl}(C_a, C_b)$
+Evaluates functional resemblance over the core functional sector:
+
+$$
+\mathbf{v}_{\text{func}}(C) = \big[ \mathbf{p}_{\text{val}} \;\parallel\; \mathbf{p}_{\text{mask}} \;\parallel\; \mathbf{e}_{\text{val}} \;\parallel\; \mathbf{e}_{\text{mask}} \;\parallel\; \mathbf{i} \;\parallel\; \mathbf{o} \big]
+$$
+
+The functional similarity is defined as:
+
+$$
+\text{Sim}_{\text{func}}(C_a, C_b) = \frac{\langle \mathbf{v}_{\text{func}}(C_a), \mathbf{v}_{\text{func}}(C_b) \rangle}{\|\mathbf{v}_{\text{func}}(C_a)\|_2 \|\mathbf{v}_{\text{func}}(C_b)\|_2}
+$$
+
+#### Implementation Dissimilarity
+
 Quantifies divergence in execution mechanics without penalizing functional equivalence:
-$$\text{Dist}_{impl}(C_a, C_b) = \|\mathbf{t}_a - \mathbf{t}_b\|_2 + \|\mathbf{m}_a - \mathbf{m}_b\|_2$$
 
-#### Directional Compatibility $\text{Compat}(C_1 \to C_2)$
-Let $\mathbf{m}_{overlap} = \mathbf{e}_{mask, 1} \odot \mathbf{p}_{mask, 2}$ represent state variables modified by $C_1$ and required by $C_2$.  
-If there exists an active contradiction:
-$$\text{Conflict}(C_1, C_2) = \sum_{k} \mathbf{m}_{overlap}[k] \cdot \mathbb{I}(|\mathbf{e}_{val, 1}[k] - \mathbf{p}_{val, 2}[k]| > 10^{-4}) > 0$$
+$$
+\text{Dist}_{\text{impl}}(C_a, C_b) = \|\mathbf{t}_a - \mathbf{t}_b\|_2 + \|\mathbf{m}_a - \mathbf{m}_b\|_2
+$$
+
+#### Directional Compatibility
+
+Let the overlapping state variable mask between $C_1$ and $C_2$ be:
+
+$$
+\mathbf{m}_{\text{overlap}} = \mathbf{e}_{\text{mask}, 1} \odot \mathbf{p}_{\text{mask}, 2}
+$$
+
+If there exists an active state contradiction:
+
+$$
+\text{Conflict}(C_1, C_2) = \sum_{k} \mathbf{m}_{\text{overlap}}[k] \cdot \mathbb{I}(|\mathbf{e}_{\text{val}, 1}[k] - \mathbf{p}_{\text{val}, 2}[k]| > 10^{-4}) > 0
+$$
+
 then the sequence is strictly invalid: $\text{Compat}(C_1 \to C_2) = 0.0$.  
-Otherwise:
-$$\text{Compat}(C_1 \to C_2) = w_{PE} \cdot \frac{\sum_k \mathbf{m}_{overlap}[k] \cdot \mathbb{I}(\mathbf{e}_{val, 1}[k] = \mathbf{p}_{val, 2}[k])}{\sum_k \mathbf{m}_{overlap}[k] + \epsilon} + w_{IO} \cdot \frac{\langle \mathbf{o}_1, \mathbf{i}_2 \rangle}{\|\mathbf{o}_1\|_2 \|\mathbf{i}_2\|_2 + \epsilon}$$
+
+Otherwise, directional compatibility is defined as:
+
+$$
+\text{Compat}(C_1 \to C_2) = w_{\text{PE}} \cdot \frac{\sum_k \mathbf{m}_{\text{overlap}}[k] \cdot \mathbb{I}(\mathbf{e}_{\text{val}, 1}[k] = \mathbf{p}_{\text{val}, 2}[k])}{\sum_k \mathbf{m}_{\text{overlap}}[k] + \epsilon} + w_{\text{IO}} \cdot \frac{\langle \mathbf{o}_1, \mathbf{i}_2 \rangle}{\|\mathbf{o}_1\|_2 \|\mathbf{i}_2\|_2 + \epsilon}
+$$
 
 ---
 
@@ -164,33 +239,76 @@ When two compatible capabilities are composed sequentially, $C_{12} = C_2 \circ 
 - **Outputs**: $O_{12} = O_1 \cup O_2$.
 - **Resources**: $R_{12} = R_1 \cup R_2$.
 
-#### Algebraic Vector Operator $\odot_{comp}$
-The composite vector $\mathbf{v}_{12} = \mathbf{v}_2 \odot_{comp} \mathbf{v}_1$ is computed directly in $\mathbb{R}^{d_C}$ without symbolic reparsing:
-- **Effects**:
-  $$\mathbf{e}_{mask, 12} = \mathbf{e}_{mask, 2} + \mathbf{e}_{mask, 1} \odot (\mathbf{1} - \mathbf{e}_{mask, 2})$$
-  $$\mathbf{e}_{val, 12} = \mathbf{e}_{val, 2} \odot \mathbf{e}_{mask, 2} + \mathbf{e}_{val, 1} \odot \mathbf{e}_{mask, 1} \odot (\mathbf{1} - \mathbf{e}_{mask, 2})$$
-- **Preconditions**:
-  $$\mathbf{p}_{mask, 12} = \mathbf{p}_{mask, 1} + \mathbf{p}_{mask, 2} \odot (\mathbf{1} - \mathbf{e}_{mask, 1})$$
-  $$\mathbf{p}_{val, 12} = \mathbf{p}_{val, 1} \odot \mathbf{p}_{mask, 1} + \mathbf{p}_{val, 2} \odot \mathbf{p}_{mask, 2} \odot (\mathbf{1} - \mathbf{e}_{mask, 1})$$
-- **Resources**:
-  $$\mathbf{r}_{12} = \min(\mathbf{r}_1 + \mathbf{r}_2, \mathbf{1})$$
+#### Algebraic Vector Operator
+
+The composite capability vector:
+
+$$
+\mathbf{v}_{12} = \mathbf{v}_2 \odot_{\text{comp}} \mathbf{v}_1
+$$
+
+is computed directly in $\mathbb{R}^{d_C}$ without symbolic reparsing:
+
+**Effects Sector**:
+
+$$
+\begin{aligned}
+\mathbf{e}_{\text{mask}, 12} &= \mathbf{e}_{\text{mask}, 2} + \mathbf{e}_{\text{mask}, 1} \odot (\mathbf{1} - \mathbf{e}_{\text{mask}, 2}) \\
+\mathbf{e}_{\text{val}, 12} &= \mathbf{e}_{\text{val}, 2} \odot \mathbf{e}_{\text{mask}, 2} + \mathbf{e}_{\text{val}, 1} \odot \mathbf{e}_{\text{mask}, 1} \odot (\mathbf{1} - \mathbf{e}_{\text{mask}, 2})
+\end{aligned}
+$$
+
+**Preconditions Sector**:
+
+$$
+\begin{aligned}
+\mathbf{p}_{\text{mask}, 12} &= \mathbf{p}_{\text{mask}, 1} + \mathbf{p}_{\text{mask}, 2} \odot (\mathbf{1} - \mathbf{e}_{\text{mask}, 1}) \\
+\mathbf{p}_{\text{val}, 12} &= \mathbf{p}_{\text{val}, 1} \odot \mathbf{p}_{\text{mask}, 1} + \mathbf{p}_{\text{val}, 2} \odot \mathbf{p}_{\text{mask}, 2} \odot (\mathbf{1} - \mathbf{e}_{\text{mask}, 1})
+\end{aligned}
+$$
+
+**Resource Sector**:
+
+$$
+\mathbf{r}_{12} = \min(\mathbf{r}_1 + \mathbf{r}_2, \mathbf{1})
+$$
 
 **Associativity**: Under sequential composition without variable masking cycles, the operator satisfies strict associativity:
-$$(\mathbf{v}_3 \odot_{comp} \mathbf{v}_2) \odot_{comp} \mathbf{v}_1 = \mathbf{v}_3 \odot_{comp} (\mathbf{v}_2 \odot_{comp} \mathbf{v}_1)$$
-Empirical validation in Experiment 2 confirms $\|\mathbf{v}_{left} - \mathbf{v}_{right}\|_2 = 0.000000\text{e}+00$ and cosine similarity $= 1.000000$.
+
+$$
+(\mathbf{v}_3 \odot_{\text{comp}} \mathbf{v}_2) \odot_{\text{comp}} \mathbf{v}_1 = \mathbf{v}_3 \odot_{\text{comp}} (\mathbf{v}_2 \odot_{\text{comp}} \mathbf{v}_1)
+$$
+
+Empirical validation in Experiment 2 confirms exact preservation with $\Delta = 0.000000\text{e}+00$ and cosine similarity $= 1.000000$.
 
 ---
 
 ### 1.5 Operational & Reliability Vector Homomorphism
 
 Under sequential composition, operational latencies, monetary expenses, resource units, and energy costs accumulate additively:
-$$T_{12} = T_1 + T_2, \quad C_{money, 12} = C_{money, 1} + C_{money, 2}$$
+
+$$
+T_{12} = T_1 + T_2, \quad C_{\text{money}, 12} = C_{\text{money}, 1} + C_{\text{money}, 2}
+$$
+
 In contrast, independent execution reliabilities multiply:
-$$Rel(C_2 \circ C_1) = Rel_1 \times Rel_2$$
+
+$$
+Rel(C_2 \circ C_1) = Rel_1 \times Rel_2
+$$
+
 To represent multiplicative probabilities within an additive vector space, we apply a **negative log-likelihood transformation**:
-$$\mathbf{q}[5] = -\ln(\max(Rel_i, 10^{-6}))$$
+
+$$
+\mathbf{q}[5] = -\ln(\max(Rel_i, 10^{-6}))
+$$
+
 By logarithmic identity:
-$$-\ln(Rel_1 \times Rel_2) = -\ln(Rel_1) + -\ln(Rel_2)$$
+
+$$
+-\ln(Rel_1 \times Rel_2) = -\ln(Rel_1) + -\ln(Rel_2)
+$$
+
 Hence, vector addition on coordinate 5 exactly matches composite reliability multiplication with **zero mathematical discrepancy** ($\Delta = 0.000000\text{e}+00$).
 
 ---
@@ -263,14 +381,24 @@ Because no public dataset natively implements the complete 11-tuple $C_i = (T_i,
 #### 4.1.1 Context and Motivation
 In Assignment 1, we developed graph search mechanisms (Lifelong Planning A\*, D\* Lite) over a Cartesian state space $\mathbb{R}^d$ to find cost-minimal, obstacle-avoiding paths between fixed coordinates. In real-world software engineering and autonomous agent systems, state transitions are realized not by abstract directed edges, but by **executable capabilities**: modular services, APIs, database procedures, GUI automation steps, and event-driven functions.
 
-In Word2Vec, semantic similarity places synonyms near one another, and linear vector offsets reflect analogies ($\mathbf{v}_{\text{King}} - \mathbf{v}_{\text{Man}} + \mathbf{v}_{\text{Woman}} \approx \mathbf{v}_{\text{Queen}}$). However, in capability spaces:
+In Word2Vec, semantic similarity places synonyms near one another, and linear vector offsets reflect analogies:
+
+$$
+\mathbf{v}_{\text{King}} - \mathbf{v}_{\text{Man}} + \mathbf{v}_{\text{Woman}} \approx \mathbf{v}_{\text{Queen}}
+$$
+
+However, in capability spaces:
 1. **Functional resemblance $\ne$ composability**: Two capabilities that execute payments (e.g., PayPal API and Stripe API) are functionally identical, yet they cannot compose with each other. Conversely, an order creation capability and a payment capability are functionally distinct, yet they compose seamlessly because the effects of the former satisfy the preconditions of the latter.
 2. **Directionality & Asymmetry**: Composition is strictly ordered ($C_2 \circ C_1 \ne C_1 \circ C_2$).
 3. **Multi-Faceted Nature**: A capability simultaneously possesses logical preconditions, state mutation effects, schema-typed input/output ports, operational costs (latency, money, resource consumption, risk, energy), stochastic reliability, dynamic availability, and execution mechanics.
 
 #### 4.1.2 Formal Problem Statement
 Given an application problem instance:
-$$\mathcal{P} = (\mathcal{S}, \mathcal{C}, S_I, G, \mathcal{R}, \mathcal{K})$$
+
+$$
+\mathcal{P} = (\mathcal{S}, \mathcal{C}, S_I, G, \mathcal{R}, \mathcal{K})
+$$
+
 where:
 - $\mathcal{S}$ is the application state space over state variables $V = \{x_1, \dots, x_n\}$,
 - $\mathcal{C} = \{C_1, \dots, C_N\}$ is the library of available capabilities,
@@ -280,7 +408,11 @@ where:
 - $\mathcal{K}$ represents global constraints and policies.
 
 The primary research objective is to formulate embedding functions:
-$$\phi_S : \mathcal{S} \to \mathbb{R}^{d_S}, \quad \phi_G : G \to \mathbb{R}^{d_G}, \quad \phi_C : \mathcal{C} \to \mathbb{R}^{d_C}$$
+
+$$
+\phi_S : \mathcal{S} \to \mathbb{R}^{d_S}, \quad \phi_G : G \to \mathbb{R}^{d_G}, \quad \phi_C : \mathcal{C} \to \mathbb{R}^{d_C}
+$$
+
 and vector operators such that geometric proximity, projections, and algebraic combinations preserve capability identity, state applicability, precondition-effect compatibility, data dependencies, compositional closure, goal relevance, and multi-criteria operational trade-offs.
 
 ---
@@ -291,14 +423,14 @@ To ensure theoretical soundness and practical utility in automated planning, our
 
 | ID | Design Requirement | Mathematical / Structural Criterion |
 | :--- | :--- | :--- |
-| **R1** | **Capability Identity** | Functionally distinct capabilities must map to distinguishable vectors: $\forall C_i \ne C_j, \|\phi_C(C_i) - \phi_C(C_j)\|_2 > \epsilon$. |
-| **R2** | **State Awareness** | The embedding must capture whether state $S$ satisfies $P_i$: $\text{Applicable}(S, C_i) \iff \|\mathbf{m}_{P,i} \odot (\phi_S(S) - \mathbf{p}_{val, i})\|_2 = 0$. |
+| **R1** | **Capability Identity** | Functionally distinct capabilities must map to distinguishable vectors: $\forall C_i \ne C_j, \Vert \phi_C(C_i) - \phi_C(C_j) \Vert_2 > \epsilon$. |
+| **R2** | **State Awareness** | The embedding must capture whether state $S$ satisfies $P_i$: $\text{Applicable}(S, C_i) \iff \Vert \mathbf{m}\_{P,i} \odot (\phi_S(S) - \mathbf{p}\_{\text{val}, i}) \Vert_2 = 0$. |
 | **R3** | **Precondition–Effect Compatibility** | If $E_i$ enables $P_j$, the compatibility score $\text{Compat}(C_i, C_j) \to 1.0$. If $E_i$ contradicts $P_j$, $\text{Compat}(C_i, C_j) = 0.0$. |
-| **R4** | **Input–Output Dependency** | Data flow $O_i \rightsquigarrow I_j$ must be represented via schema subspace alignment: $\langle \mathbf{o}_i, \mathbf{i}_j \rangle > 0$. |
-| **R5** | **Decoupled Similarity vs Composability** | $\text{Sim}_{func}(C_a, C_b) \approx 1$ must not imply $\text{Compat}(C_a, C_b) = 1$. Implementation modality must be disentangled from functional effects. |
-| **R6** | **Algebraic Composition Homomorphism** | The vector composition operator $\odot_{comp}$ must satisfy $\phi_C(C_j \circ C_i) = \phi_C(C_j) \odot_{comp} \phi_C(C_i)$ and associativity: $(C_k \circ C_j) \circ C_i = C_k \circ (C_j \circ C_i)$. |
+| **R4** | **Input–Output Dependency** | Data flow $O_i \rightsquigarrow I_j$ must be represented via schema subspace alignment: $\langle \mathbf{o}\_i, \mathbf{i}\_j \rangle > 0$. |
+| **R5** | **Decoupled Similarity vs Composability** | $\text{Sim}\_{\text{func}}(C_a, C_b) \approx 1$ must not imply $\text{Compat}(C_a, C_b) = 1$. Implementation modality must be disentangled from functional effects. |
+| **R6** | **Algebraic Composition Homomorphism** | The vector composition operator $\odot\_{\text{comp}}$ must satisfy $\phi_C(C_j \circ C_i) = \phi_C(C_j) \odot\_{\text{comp}} \phi_C(C_i)$ and associativity: $(C_k \circ C_j) \circ C_i = C_k \circ (C_j \circ C_i)$. |
 | **R7** | **Goal Relevance Alignment** | Capabilities advancing state toward $G$ must project positively onto $\phi_G(G)$, while irrelevant distractors must yield $\le 0$. |
-| **R8** | **Operational Homomorphism** | Sequential composition must accumulate costs additively: $\mathbf{q}_{12} = \mathbf{q}_1 + \mathbf{q}_2$, with log-reliability $-\ln(Rel_{12}) = -\ln(Rel_1) + -\ln(Rel_2)$. |
+| **R8** | **Operational Homomorphism** | Sequential composition must accumulate costs additively: $\mathbf{q}\_{12} = \mathbf{q}\_1 + \mathbf{q}\_2$, with log-reliability $-\ln(Rel\_{12}) = -\ln(Rel\_1) + -\ln(Rel\_2)$. |
 
 ---
 
@@ -325,7 +457,9 @@ As audited in our Deliverable 3 survey (`data/dataset_search_notes.md`), OWLS-TC
 
 To resolve the limitations of single monolithic vector embeddings, we propose a **Structured Multi-Sector Subspace Embedding**. A capability vector $\phi_C(C_i) \in \mathbb{R}^{d_C}$ is partitioned into eight mathematically defined orthogonal sectors:
 
-$$\phi_C(C_i) = \big[ \mathbf{p}_{val} \;\parallel\; \mathbf{p}_{mask} \;\parallel\; \mathbf{e}_{val} \;\parallel\; \mathbf{e}_{mask} \;\parallel\; \mathbf{i} \;\parallel\; \mathbf{o} \;\parallel\; \mathbf{t} \;\parallel\; \mathbf{r} \;\parallel\; \mathbf{q} \;\parallel\; \mathbf{m} \big]$$
+$$
+\phi_C(C_i) = \big[ \mathbf{p}_{\text{val}} \;\parallel\; \mathbf{p}_{\text{mask}} \;\parallel\; \mathbf{e}_{\text{val}} \;\parallel\; \mathbf{e}_{\text{mask}} \;\parallel\; \mathbf{i} \;\parallel\; \mathbf{o} \;\parallel\; \mathbf{t} \;\parallel\; \mathbf{r} \;\parallel\; \mathbf{q} \;\parallel\; \mathbf{m} \big]
+$$
 
 ```
 +--------------------------------------------------------------------------------------------------------------------+
@@ -336,91 +470,164 @@ $$\phi_C(C_i) = \big[ \mathbf{p}_{val} \;\parallel\; \mathbf{p}_{mask} \;\parall
 +-------------------+-------------------+-------------+--------------+------------+------------+-----------+-------------+
 ```
 
-1. **Precondition Sector** $[\mathbf{p}_{val} \parallel \mathbf{p}_{mask}] \in \mathbb{R}^{2 \cdot d_S}$: Expected values and active precondition indicator masks.
-2. **Effect Sector** $[\mathbf{e}_{val} \parallel \mathbf{e}_{mask}] \in \mathbb{R}^{2 \cdot d_S}$: Mutation values and active mutation indicator masks.
-3. **Input Schema Sector** $\mathbf{i} \in \mathbb{R}^{d_{io}}$: Typed hash signature of required parameters.
-4. **Output Schema Sector** $\mathbf{o} \in \mathbb{R}^{d_{io}}$: Typed hash signature of produced parameters.
-5. **Type Sector** $\mathbf{t} \in \mathbb{R}^9$: One-hot encoding of execution type.
-6. **Resource Sector** $\mathbf{r} \in \mathbb{R}^{d_{res}}$: Multi-hot vector over resource universe $\mathcal{R}$.
-7. **Operational Attributes Sector** $\mathbf{q} \in \mathbb{R}^7$: Normalized latency, resource cost, money, risk, energy, log-reliability, and availability.
-8. **Mechanism Sector** $\mathbf{m} \in \mathbb{R}^{d_m}$: Dense signature of execution mechanism metadata.
+1. **Precondition Sector** ($\mathbf{p} \in \mathbb{R}^{2 \cdot d_S}$): Expected values and active precondition indicator masks.
+2. **Effect Sector** ($\mathbf{e} \in \mathbb{R}^{2 \cdot d_S}$): Mutation values and active mutation indicator masks.
+3. **Input Schema Sector** ($\mathbf{i} \in \mathbb{R}^{d_{\text{io}}}$): Typed hash signature of required parameters.
+4. **Output Schema Sector** ($\mathbf{o} \in \mathbb{R}^{d_{\text{io}}}$): Typed hash signature of produced parameters.
+5. **Type Sector** ($\mathbf{t} \in \mathbb{R}^9$): One-hot encoding of execution type.
+6. **Resource Sector** ($\mathbf{r} \in \mathbb{R}^{d_{\text{res}}}$): Multi-hot vector over resource universe $\mathcal{R}$.
+7. **Operational Attributes Sector** ($\mathbf{q} \in \mathbb{R}^7$): Normalized latency, resource cost, money, risk, energy, log-reliability, and availability.
+8. **Mechanism Sector** ($\mathbf{m} \in \mathbb{R}^{d_m}$): Dense signature of execution mechanism metadata.
 
 ---
 
 ### 4.5 Mathematical Formulation
 
-#### 4.5.1 State Space Embedding $\phi_S(S)$
+#### 4.5.1 State Space Embedding
 Let application state $S = \{(x_k, v_k)\}_{k=1}^n$. Each variable $x_k$ maps to coordinates in $\mathbb{R}^{d_k}$:
-- Boolean: $v_k \in \{0, 1\} \implies \mathbf{s}_k = [v_k] \in \{0, 1\}^1$.
-- Categorical / Enum: Domain $\mathcal{D}_k = \{c_1, \dots, c_m\} \implies \mathbf{s}_k = \mathbf{e}_{idx(v_k)} \in \{0, 1\}^m$.
-- Numerical: Normalized scalar $\tilde{v}_k = \frac{v_k - v_{min}}{v_{max} - v_{min}} \in [0, 1]$.
+- **Boolean**: $v_k \in \{0, 1\} \implies \mathbf{s}_k = [v_k] \in \{0, 1\}^1$.
+- **Categorical / Enum**: Domain $\mathcal{D}_k = \{c_1, \dots, c_m\} \implies \mathbf{s}\_k = \mathbf{e}\_{\text{idx}(v_k)} \in \{0, 1\}^m$.
+- **Numerical**: Normalized scalar coordinate:
+
+$$
+\tilde{v}_k = \frac{v_k - v_{\text{min}}}{v_{\text{max}} - v_{\text{min}}} \in [0, 1]
+$$
 
 Complete state embedding:
-$$\phi_S(S) = \big[ \mathbf{s}_1 \;\parallel\; \mathbf{s}_2 \;\parallel\; \dots \;\parallel\; \mathbf{s}_n \big] \in \mathbb{R}^{d_S}$$
 
-#### 4.5.2 Goal Specification Embedding $\phi_G(G)$
+$$
+\phi_S(S) = \big[ \mathbf{s}_1 \;\parallel\; \mathbf{s}_2 \;\parallel\; \dots \;\parallel\; \mathbf{s}_n \big] \in \mathbb{R}^{d_S}
+$$
+
+#### 4.5.2 Goal Specification Embedding
 Goal $G = \{g_1, \dots, g_m\}$ specifies target valuations for active goal dimensions:
-$$\mathbf{g}_{val}[k] = \text{target value for variable } k, \quad \mathbf{g}_{mask}[k] = \begin{cases} 1 & \text{if variable } k \in G \\ 0 & \text{otherwise} \end{cases}$$
-$$\phi_G(G) = \big[ \mathbf{g}_{val} \;\parallel\; \mathbf{g}_{mask} \big] \in \mathbb{R}^{2 \cdot d_S}$$
+
+$$
+\begin{aligned}
+\mathbf{g}_{\text{val}}[k] &= \text{target value for variable } k \\
+\mathbf{g}_{\text{mask}}[k] &= \begin{cases} 1 & \text{if variable } k \in G \\ 0 & \text{otherwise} \end{cases} \\
+\phi_G(G) &= \big[ \mathbf{g}_{\text{val}} \;\parallel\; \mathbf{g}_{\text{mask}} \big] \in \mathbb{R}^{2 \cdot d_S}
+\end{aligned}
+$$
 
 State satisfaction condition:
-$$S \models G \iff \|\mathbf{g}_{mask} \odot (\phi_S(S) - \mathbf{g}_{val})\|_2 = 0$$
+
+$$
+S \models G \iff \|\mathbf{g}_{\text{mask}} \odot (\phi_S(S) - \mathbf{g}_{\text{val}})\|_2 = 0
+$$
 
 #### 4.5.3 Similarity Metrics
 We formalize three orthogonal similarity operators:
-1. **Functional Similarity**:
-   $$\mathbf{v}_{func}(C) = \big[ \mathbf{p}_{val} \;\parallel\; \mathbf{p}_{mask} \;\parallel\; \mathbf{e}_{val} \;\parallel\; \mathbf{e}_{mask} \;\parallel\; \mathbf{i} \;\parallel\; \mathbf{o} \big]$$
-   $$\text{Sim}_{func}(C_a, C_b) = \frac{\langle \mathbf{v}_{func}(C_a), \mathbf{v}_{func}(C_b) \rangle}{\|\mathbf{v}_{func}(C_a)\|_2 \|\mathbf{v}_{func}(C_b)\|_2}$$
-2. **Implementation Dissimilarity**:
-   $$\text{Dist}_{impl}(C_a, C_b) = \|\mathbf{t}_a - \mathbf{t}_b\|_2 + \|\mathbf{m}_a - \mathbf{m}_b\|_2$$
-3. **Full Cosine Similarity**:
-   $$\text{Sim}_{full}(C_a, C_b) = \frac{\langle \phi_C(C_a), \phi_C(C_b) \rangle}{\|\phi_C(C_a)\|_2 \|\phi_C(C_b)\|_2}$$
 
-#### 4.5.4 Directional Compatibility Operator $\text{Compat}(C_1 \to C_2)$
-Let $\mathbf{m}_{overlap} = \mathbf{e}_{mask, 1} \odot \mathbf{p}_{mask, 2}$. The conflict counter is:
-$$\text{Conflict}(C_1, C_2) = \sum_{k} \mathbf{m}_{overlap}[k] \cdot \mathbb{I}(|\mathbf{e}_{val, 1}[k] - \mathbf{p}_{val, 2}[k]| > 10^{-4})$$
+**1. Functional Similarity**:
 
-If $\text{Conflict}(C_1, C_2) > 0$, the sequence is strictly incompatible: $\text{Compat}(C_1, C_2) = 0.0$.  
-Otherwise:
-$$\text{Compat}_{PE}(C_1, C_2) = \frac{\sum_k \mathbf{m}_{overlap}[k] \cdot \mathbb{I}(\mathbf{e}_{val, 1}[k] = \mathbf{p}_{val, 2}[k])}{\sum_k \mathbf{m}_{overlap}[k] + \epsilon}$$
-$$\text{Compat}_{IO}(C_1, C_2) = \frac{\langle \mathbf{o}_1, \mathbf{i}_2 \rangle}{\|\mathbf{o}_1\|_2 \|\mathbf{i}_2\|_2 + \epsilon}$$
-$$\text{Compat}(C_1 \to C_2) = w_{PE} \cdot \text{Compat}_{PE} + w_{IO} \cdot \text{Compat}_{IO}$$
+$$
+\begin{aligned}
+\mathbf{v}_{\text{func}}(C) &= \big[ \mathbf{p}_{\text{val}} \;\parallel\; \mathbf{p}_{\text{mask}} \;\parallel\; \mathbf{e}_{\text{val}} \;\parallel\; \mathbf{e}_{\text{mask}} \;\parallel\; \mathbf{i} \;\parallel\; \mathbf{o} \big] \\
+\text{Sim}_{\text{func}}(C_a, C_b) &= \frac{\langle \mathbf{v}_{\text{func}}(C_a), \mathbf{v}_{\text{func}}(C_b) \rangle}{\|\mathbf{v}_{\text{func}}(C_a)\|_2 \|\mathbf{v}_{\text{func}}(C_b)\|_2}
+\end{aligned}
+$$
+
+**2. Implementation Dissimilarity**:
+
+$$
+\text{Dist}_{\text{impl}}(C_a, C_b) = \|\mathbf{t}_a - \mathbf{t}_b\|_2 + \|\mathbf{m}_a - \mathbf{m}_b\|_2
+$$
+
+**3. Full Cosine Similarity**:
+
+$$
+\text{Sim}_{\text{full}}(C_a, C_b) = \frac{\langle \phi_C(C_a), \phi_C(C_b) \rangle}{\|\phi_C(C_a)\|_2 \|\phi_C(C_b)\|_2}
+$$
+
+#### 4.5.4 Directional Compatibility Operator
+
+Let the overlapping state variable mask between $C_1$ and $C_2$ be:
+
+$$
+\mathbf{m}_{\text{overlap}} = \mathbf{e}_{\text{mask}, 1} \odot \mathbf{p}_{\text{mask}, 2}
+$$
+
+The conflict counter is:
+
+$$
+\text{Conflict}(C_1, C_2) = \sum_{k} \mathbf{m}_{\text{overlap}}[k] \cdot \mathbb{I}(|\mathbf{e}_{\text{val}, 1}[k] - \mathbf{p}_{\text{val}, 2}[k]| > 10^{-4})
+$$
+
+If $\text{Conflict}(C_1, C_2) > 0$, the sequence is strictly invalid: $\text{Compat}(C_1 \to C_2) = 0.0$.  
+
+Otherwise, directional compatibility is defined as:
+
+$$
+\begin{aligned}
+\text{Compat}_{\text{PE}}(C_1, C_2) &= \frac{\sum_k \mathbf{m}_{\text{overlap}}[k] \cdot \mathbb{I}(\mathbf{e}_{\text{val}, 1}[k] = \mathbf{p}_{\text{val}, 2}[k])}{\sum_k \mathbf{m}_{\text{overlap}}[k] + \epsilon} \\
+\text{Compat}_{\text{IO}}(C_1, C_2) &= \frac{\langle \mathbf{o}_1, \mathbf{i}_2 \rangle}{\|\mathbf{o}_1\|_2 \|\mathbf{i}_2\|_2 + \epsilon} \\
+\text{Compat}(C_1 \to C_2) &= w_{\text{PE}} \cdot \text{Compat}_{\text{PE}} + w_{\text{IO}} \cdot \text{Compat}_{\text{IO}}
+\end{aligned}
+$$
 
 ---
 
 ### 4.6 Capability Composition Model
 
-#### 4.6.1 Semantic Composition $C_{12} = C_2 \circ C_1$
-When $C_1$ is followed by $C_2$, the composite capability $C_{12}$ is defined by:
+#### 4.6.1 Semantic Composition
+When $C_1$ is followed by $C_2$, the composite capability $C_{12} = C_2 \circ C_1$ is defined by:
 - **Preconditions**: $P_{12} = P_1 \cup (P_2 \setminus E_1)$ (Preconditions of $C_1$, plus any precondition of $C_2$ not established by $C_1$).
-- **Effects**: $E_{12} = (E_1 \setminus \text{Dom}(E_2)) \cup E_2$ (Effects of $C_2$ overwrite $C_1$ on shared variables; non-conflicting effects persist).
+- **Effects**: $E_{12} = (E_1 \setminus \text{Dom}(E_2)) \cup E_2$ (Effects of $C_2$ override $C_1$ on shared variables; non-conflicting effects persist).
 - **Inputs**: $I_{12} = I_1 \cup (I_2 \setminus O_1)$.
 - **Outputs**: $O_{12} = O_1 \cup O_2$.
 - **Resources**: $R_{12} = R_1 \cup R_2$.
 - **Operational Costs**:
-  - $T_{12} = T_1 + T_2$,
-  - $C_{money, 12} = C_{money, 1} + C_{money, 2}$,
-  - $C_{res, 12} = C_{res, 1} + C_{res, 2}$,
-  - $Rel_{12} = Rel_1 \times Rel_2$,
-  - $A_{12} = A_1 \times A_2$.
 
-#### 4.6.2 Algebraic Vector Composition Operator $\odot_{comp}$
-The composite vector $\mathbf{v}_{12} = \mathbf{v}_2 \odot_{comp} \mathbf{v}_1$ is computed directly in $\mathbb{R}^{d_C}$ without symbolic reparsing:
-1. **Effects Sector**:
-   $$\mathbf{e}_{mask, 12} = \mathbf{e}_{mask, 2} + \mathbf{e}_{mask, 1} \odot (\mathbf{1} - \mathbf{e}_{mask, 2})$$
-   $$\mathbf{e}_{val, 12} = \mathbf{e}_{val, 2} \odot \mathbf{e}_{mask, 2} + \mathbf{e}_{val, 1} \odot \mathbf{e}_{mask, 1} \odot (\mathbf{1} - \mathbf{e}_{mask, 2})$$
-2. **Preconditions Sector**:
-   $$\mathbf{p}_{mask, 12} = \mathbf{p}_{mask, 1} + \mathbf{p}_{mask, 2} \odot (\mathbf{1} - \mathbf{e}_{mask, 1})$$
-   $$\mathbf{p}_{val, 12} = \mathbf{p}_{val, 1} \odot \mathbf{p}_{mask, 1} + \mathbf{p}_{val, 2} \odot \mathbf{p}_{mask, 2} \odot (\mathbf{1} - \mathbf{e}_{mask, 1})$$
-3. **Operational Sector**:
-   $$\mathbf{q}_{12}[0:5] = \mathbf{q}_1[0:5] + \mathbf{q}_2[0:5]$$
-   $$\mathbf{q}_{12}[5] = \mathbf{q}_1[5] + \mathbf{q}_2[5] \quad \big(-\ln(Rel_1 \cdot Rel_2) = -\ln Rel_1 + -\ln Rel_2\big)$$
-   $$\mathbf{q}_{12}[6] = \mathbf{q}_1[6] \cdot \mathbf{q}_2[6] \quad (A_{12} = A_1 \cdot A_2)$$
-4. **Resource Sector**:
-   $$\mathbf{r}_{12} = \min(\mathbf{r}_1 + \mathbf{r}_2, \mathbf{1})$$
+$$
+\begin{aligned}
+T_{12} &= T_1 + T_2 \\
+C_{\text{money}, 12} &= C_{\text{money}, 1} + C_{\text{money}, 2} \\
+C_{\text{res}, 12} &= C_{\text{res}, 1} + C_{\text{res}, 2} \\
+Rel_{12} &= Rel_1 \times Rel_2 \\
+A_{12} &= A_1 \times A_2
+\end{aligned}
+$$
 
-**Theorem (Homomorphism & Associativity)**: Under sequential composition without variable masking cycles, the vector operator $\odot_{comp}$ forms a semi-group with identity $\mathbf{0}$ satisfying:
-$$(\mathbf{v}_3 \odot_{comp} \mathbf{v}_2) \odot_{comp} \mathbf{v}_1 = \mathbf{v}_3 \odot_{comp} (\mathbf{v}_2 \odot_{comp} \mathbf{v}_1)$$
+#### 4.6.2 Algebraic Vector Composition Operator
+
+The composite capability vector:
+
+$$
+\mathbf{v}_{12} = \mathbf{v}_2 \odot_{\text{comp}} \mathbf{v}_1
+$$
+
+is computed directly in $\mathbb{R}^{d_C}$ without symbolic reparsing:
+
+**Effects Sector**:
+
+$$
+\begin{aligned}
+\mathbf{e}_{\text{mask}, 12} &= \mathbf{e}_{\text{mask}, 2} + \mathbf{e}_{\text{mask}, 1} \odot (\mathbf{1} - \mathbf{e}_{\text{mask}, 2}) \\
+\mathbf{e}_{\text{val}, 12} &= \mathbf{e}_{\text{val}, 2} \odot \mathbf{e}_{\text{mask}, 2} + \mathbf{e}_{\text{val}, 1} \odot \mathbf{e}_{\text{mask}, 1} \odot (\mathbf{1} - \mathbf{e}_{\text{mask}, 2})
+\end{aligned}
+$$
+
+**Preconditions Sector**:
+
+$$
+\begin{aligned}
+\mathbf{p}_{\text{mask}, 12} &= \mathbf{p}_{\text{mask}, 1} + \mathbf{p}_{\text{mask}, 2} \odot (\mathbf{1} - \mathbf{e}_{\text{mask}, 1}) \\
+\mathbf{p}_{\text{val}, 12} &= \mathbf{p}_{\text{val}, 1} \odot \mathbf{p}_{\text{mask}, 1} + \mathbf{p}_{\text{val}, 2} \odot \mathbf{p}_{\text{mask}, 2} \odot (\mathbf{1} - \mathbf{e}_{\text{mask}, 1})
+\end{aligned}
+$$
+
+**Resource Sector**:
+
+$$
+\mathbf{r}_{12} = \min(\mathbf{r}_1 + \mathbf{r}_2, \mathbf{1})
+$$
+
+**Theorem (Homomorphism & Associativity)**: Under sequential composition without variable masking cycles, the vector operator $\odot_{\text{comp}}$ forms a semi-group with identity $\mathbf{0}$ satisfying:
+
+$$
+(\mathbf{v}_3 \odot_{\text{comp}} \mathbf{v}_2) \odot_{\text{comp}} \mathbf{v}_1 = \mathbf{v}_3 \odot_{\text{comp}} (\mathbf{v}_2 \odot_{\text{comp}} \mathbf{v}_1)
+$$
 
 ---
 
@@ -453,10 +660,10 @@ src/
 To rigorously validate the embedding against the evaluation criteria set forth in Assignment 2 Section 7 & 8, we executed five automated experiments:
 
 1. **Experiment 1 (Capability Compatibility)**: Given $C_1$ (CreateOrder: `OrderExists := True`), $C_2$ (MakePayment: requires `OrderExists == True`), and $C_3$ (CancelCart: requires `OrderExists == False`), evaluate whether $\text{Compat}(C_1, C_2)$ and $\text{Compat}(C_1, C_3)$ correctly separate compatible from contradictory sequences.
-2. **Experiment 2 (Capability Composition & Homomorphism)**: Evaluate multi-step composition $C_1 \to C_2 \to C_4$. Compare the semantic composite $\phi_C(C_{124})$ against algebraic composition $\mathbf{v}_4 \odot_{comp} (\mathbf{v}_2 \odot_{comp} \mathbf{v}_1)$. Verify algebraic associativity: $(C_4 \circ C_2) \circ C_1 \stackrel{?}{=} C_4 \circ (C_2 \circ C_1)$ and state trajectory closure $S_0 \xrightarrow{C_{124}} S_{final} \models G$.
+2. **Experiment 2 (Capability Composition & Homomorphism)**: Evaluate multi-step composition $C_1 \to C_2 \to C_4$. Compare the semantic composite $\phi_C(C_{124})$ against algebraic composition $\mathbf{v}\_4 \odot (\mathbf{v}\_2 \odot \mathbf{v}\_1)$. Verify algebraic associativity: $(C_4 \circ C_2) \circ C_1 \stackrel{?}{=} C_4 \circ (C_2 \circ C_1)$ and state trajectory closure $S_0 \xrightarrow{C_{124}} S\_{\text{final}} \models G$.
 3. **Experiment 3 (Alternative Implementations)**: Evaluate capabilities performing identical state transformations across three heterogeneous mechanisms: REST API, direct Database stored procedure, and browser GUI automation. Measure functional similarity versus mechanism distance.
 4. **Experiment 4 (Irrelevant Capabilities)**: Inject distractor capabilities (system audit log export, weather telemetry, crypto mining) into the e-commerce and cloud benchmarks. Evaluate zero-shot discrimination accuracy using the goal relevance operator.
-5. **Experiment 5 (Operational Attributes & Pareto Frontier)**: Investigate five operational criteria: latency ($C_{time}$), monetary cost ($C_{money}$), compute resources ($C_{res}$), risk ($C_{risk}$), and reliability ($Rel$). Verify vector log-additivity and compute non-dominated Pareto frontiers.
+5. **Experiment 5 (Operational Attributes & Pareto Frontier)**: Investigate five operational criteria: latency ($C_{\text{time}}$), monetary cost ($C_{\text{money}}$), compute resources ($C_{\text{res}}$), risk ($C_{\text{risk}}$), and reliability ($Rel$). Verify vector log-additivity and compute non-dominated Pareto frontiers.
 
 ---
 
@@ -483,9 +690,9 @@ Evaluation of sequential composition $C_{124} = C_4 \circ C_2 \circ C_1$:
 | **Monetary Cost** | $\$0.0100 + \$0.0500 + \$0.0020 = \$0.0620$ | $\$0.0620$ | **Exact Match ($\Delta = 0.0$)** |
 | **Reliability** | $0.99 \times 0.98 \times 0.99 = 0.960498$ | $0.960498$ | **Exact Match ($\Delta = 0.0$)** |
 | **Associativity Cosine** | $(C_4 \circ C_2) \circ C_1 \equiv C_4 \circ (C_2 \circ C_1)$ | **1.000000** | **Strictly Associative** |
-| **Associativity L2** | $\|\mathbf{v}_{left} - \mathbf{v}_{right}\|_2$ | **0.000000e+00** | **Identity Preserved** |
-| **Semantic vs Algebraic Cosine** | $\cos(\phi_C(C_{124}), \mathbf{v}_{alg})$ | **0.984071** | **Near-Perfect Homomorphism** |
-| **Goal Satisfaction** | $S_0 \xrightarrow{C_{124}} S_{final} \models G$ | **True (100% Satisfied)** | **Verified** |
+| **Associativity L2** | $\Vert \mathbf{v}\_{\text{left}} - \mathbf{v}\_{\text{right}} \Vert\_2$ | **0.000000e+00** | **Identity Preserved** |
+| **Semantic vs Algebraic Cosine** | $\cos(\phi_C(C\_{124}), \mathbf{v}\_{\text{alg}})$ | **0.984071** | **Near-Perfect Homomorphism** |
+| **Goal Satisfaction** | $S_0 \xrightarrow{C\_{124}} S\_{\text{final}} \models G$ | **True (100% Satisfied)** | **Verified** |
 
 ![Composition Trajectory](figures/exp2_composition_trajectory.png)
 
@@ -528,14 +735,14 @@ Analysis of operational parameters for CreateOrder and MakePayment implementatio
 
 | Candidate ID | Type | Latency | Monetary Cost | Reliability | Pareto Optimal? | Dominates |
 | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
-| **CreateOrder_DB** | DATABASE | **18.0 ms** | **$0.0010** | **0.9990** | **YES (OPTIMAL)** | CreateOrder_API, MakePayment_API, GUI |
-| **CreateOrder_GUI** | GUI | 650.0 ms | **$0.0000** | 0.9400 | **YES (OPTIMAL)** | MakePayment_GUI (Zero monetary cost) |
-| **CreateOrder_API** | API | 120.0 ms | $0.0200 | 0.9900 | NO (DOMINATED) | Dominated by CreateOrder_DB |
-| **MakePayment_API** | API | 220.0 ms | $0.0400 | 0.9850 | NO (DOMINATED) | Dominated by CreateOrder_DB |
-| **MakePayment_GUI** | GUI | 850.0 ms | $0.0100 | 0.9200 | NO (DOMINATED) | Dominated by CreateOrder_DB & GUI |
+| **CreateOrder_DB** | DATABASE | **18.0 ms** | **\$0.0010** | **0.9990** | **YES (OPTIMAL)** | CreateOrder_API, MakePayment_API, GUI |
+| **CreateOrder_GUI** | GUI | 650.0 ms | **\$0.0000** | 0.9400 | **YES (OPTIMAL)** | MakePayment_GUI (Zero monetary cost) |
+| **CreateOrder_API** | API | 120.0 ms | \$0.0200 | 0.9900 | NO (DOMINATED) | Dominated by CreateOrder_DB |
+| **MakePayment_API** | API | 220.0 ms | \$0.0400 | 0.9850 | NO (DOMINATED) | Dominated by CreateOrder_DB |
+| **MakePayment_GUI** | GUI | 850.0 ms | \$0.0100 | 0.9200 | NO (DOMINATED) | Dominated by CreateOrder_DB & GUI |
 
-- **Log-Reliability Vector Sum**: $v_1[5] + v_2[5] + v_4[5] = 0.040303$
-- **Composite Vector Coordinate**: $v_{124}[5] = 0.040303$
+- **Log-Reliability Vector Sum**: $\mathbf{v}_1[5] + \mathbf{v}_2[5] + \mathbf{v}_4[5] = 0.040303$
+- **Composite Vector Coordinate**: $\mathbf{v}_{124}[5] = 0.040303$
 - **Theoretical $-\ln(\prod Rel_i)$**: $0.040303$
 - **Discrepancy**: **$0.000000\text{e}+00$ (Exact Vector Additivity Preserved)**
 
@@ -549,13 +756,21 @@ In accordance with Section 8 of Assignment 2, we evaluate our system against all
 
 #### 1. Capability Representation
 *Question: Can different capabilities be represented distinctly?*  
-**Evaluation**: Yes. Functionally distinct capabilities exhibit an average pairwise Euclidean separation of $\|\phi_C(C_i) - \phi_C(C_j)\|_2 = 3.42$ and cosine similarity $< 0.35$. Even for identical functional signatures, execution mechanism sectors provide guaranteed separation ($\text{Dist}_{impl} \ge 1.68$).
+**Evaluation**: Yes. Functionally distinct capabilities exhibit an average pairwise Euclidean separation of $\Vert \phi_C(C_i) - \phi_C(C_j) \Vert\_2 = 3.42$ and cosine similarity $< 0.35$. Even for identical functional signatures, execution mechanism sectors provide guaranteed separation ($\text{Dist}\_{\text{impl}} \ge 1.68$).
 
 #### 2. State Relationship
 *Question: Does the representation capture the relationship between capabilities and states?*  
 **Evaluation**: Yes. State applicability $S \models P_i$ is evaluated with zero false positives:
-$$\text{Applicable}(S, C) \iff \|(\phi_S(S) - \mathbf{p}_{val}) \odot \mathbf{p}_{mask}\|_2 < 10^{-4}$$
-Executing $C$ updates state coordinates via vector projection: $\phi_S(S') = (\mathbf{1} - \mathbf{e}_{mask}) \odot \phi_S(S) + \mathbf{e}_{mask} \odot \mathbf{e}_{val}$.
+
+$$
+\text{Applicable}(S, C) \iff \|(\phi_S(S) - \mathbf{p}_{\text{val}}) \odot \mathbf{p}_{\text{mask}}\|_2 < 10^{-4}
+$$
+
+Executing $C$ updates state coordinates via vector projection:
+
+$$
+\phi_S(S') = (\mathbf{1} - \mathbf{e}_{\text{mask}}) \odot \phi_S(S) + \mathbf{e}_{\text{mask}} \odot \mathbf{e}_{\text{val}}
+$$
 
 #### 3. Precondition–Effect Compatibility
 *Question: Can composable capabilities be distinguished from incompatible ones?*  
@@ -563,12 +778,12 @@ Executing $C$ updates state coordinates via vector projection: $\phi_S(S') = (\m
 
 #### 4. Input–Output Compatibility
 *Question: Can dependencies between capabilities be represented?*  
-**Evaluation**: Yes. Schema hashing projects parameter names and data types into continuous sub-vectors $\mathbf{i}, \mathbf{o} \in \mathbb{R}^{d_{io}}$. When $C_1$'s output provides $C_2$'s input, $\langle \mathbf{o}_1, \mathbf{i}_2 \rangle > 0$, allowing automated data flow discovery.
+**Evaluation**: Yes. Schema hashing projects parameter names and data types into continuous sub-vectors $\mathbf{i}, \mathbf{o} \in \mathbb{R}^{d_{\text{io}}}$. When $C_1$'s output provides $C_2$'s input, $\langle \mathbf{o}_1, \mathbf{i}_2 \rangle > 0$, allowing automated data flow discovery.
 
 #### 5. Composition
 *Question: Can complex capabilities be represented from smaller capabilities?*  
 **Evaluation**: Yes. Sequential composition $C_{124} = C_4 \circ C_2 \circ C_1$ satisfies:
-1. Complete state transition equivalence ($\Delta S_{final} = 0$),
+1. Complete state transition equivalence ($\Delta S_{\text{final}} = 0$),
 2. Near-perfect vector homomorphism ($\cos = 0.984071$),
 3. Exact algebraic associativity ($\Delta = 0.000000\text{e}+00$).
 
@@ -579,7 +794,11 @@ Executing $C$ updates state coordinates via vector projection: $\phi_S(S') = (\m
 #### 7. Operational Properties
 *Question: Can cost, reliability, availability, and constraints be represented appropriately?*  
 **Evaluation**: Yes. Transforming reliability to negative log-space renders multiplicative success probabilities strictly linear in vector space:
-$$-\ln(Rel(C_2 \circ C_1)) = -\ln(Rel_1) + -\ln(Rel_2)$$
+
+$$
+-\ln(Rel(C_2 \circ C_1)) = -\ln(Rel_1) + -\ln(Rel_2)
+$$
+
 Multi-criteria Pareto extraction isolates non-dominated technological alternatives.
 
 #### 8. Consistency
@@ -590,7 +809,7 @@ Multi-criteria Pareto extraction isolates non-dominated technological alternativ
 *Question: What are the computational and storage requirements?*  
 **Evaluation**:
 - **Storage**: Compact fixed-width vectors. For the 12-variable e-commerce domain, $d_C = 80$ floating-point dimensions ($320$ bytes per capability).
-- **Compute Latency**: Encoding an application state or capability takes $< 0.15\text{ ms}$. Direct algebraic composition $\mathbf{v}_2 \odot_{comp} \mathbf{v}_1$ requires only $8.2\ \mu\text{s}$ (over $100,000$ compositions per second on CPU).
+- **Compute Latency**: Encoding an application state or capability takes $< 0.15\text{ ms}$. Direct algebraic composition ($\odot_{\text{comp}}$) requires only $8.2\ \mu\text{s}$ (over $100,000$ compositions per second on CPU).
 
 ---
 
@@ -641,5 +860,3 @@ Execute all five required experiments and regenerate all figures:
 ```bash
 python3 experiments/run_all_experiments.py
 ```
-
----
